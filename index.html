@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>汉字大冒险 - 会跳舞的笔画</title>
+    <!-- 召唤万能钥匙 -->
+    <script src="js/jquery.js"></script>
+    <!-- 召唤汉字魔法卷轴 -->
+    <script src="js/hanzi.js"></script>
+    <style>
+        body {
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            background: linear-gradient(135deg, #ff9999 0%, #99ccff 100%);
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        h1 {
+            color: #ff6b6b;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        .controls {
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(255,255,255,0.8);
+            border-radius: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        input, button {
+            padding: 10px;
+            margin: 5px;
+            border: 2px solid #4ecdc4;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+        button {
+            background: #ff6b6b;
+            color: white;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: scale(1.1);
+            background: #ff8e8e;
+        }
+        .character-container {
+            margin: 20px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            max-width: 300px;
+        }
+        #character-target-div {
+            margin: 0 auto;
+        }
+        #loading {
+            color: #4ecdc4;
+            font-weight: bold;
+        }
+        #error-message {
+            color: #ff4757;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎉 欢迎来到汉字游乐园！</h1>
+    
+    <div class="controls">
+        <label for="character-input">输入魔法汉字:</label>
+        <input type="text" id="character-input" value="我" maxlength="1">
+        <button id="change-character">🔁 变身！</button>
+    </div>
+    
+    <div class="character-container">
+        <div id="character-target-div"></div>
+        <div id="loading" style="display: none;">
+            🚀 正在召唤汉字精灵...
+        </div>
+        <div id="error-message"></div>
+        <div id="outline-status">✨ 当前状态: 轮廓显示中</div>
+    </div>
+    
+    <div class="controls">
+        <button id="animate-button">🎬 看汉字跳舞</button>
+        <button id="quiz-button">🧩 笔画大挑战</button>
+        <button id="hide-outline">👻 隐藏轮廓</button>
+    </div>
+    
+    <script>
+        // 魔法开始！
+        let writer;
+        const characterInput = document.getElementById('character-input');
+        const loadingIndicator = document.getElementById('loading');
+        const errorMessage = document.getElementById('error-message');
+        const outlineStatus = document.getElementById('outline-status');
+        let isOutlineVisible = true;
+        
+        // 显示错误信息
+        function showError(message) {
+            errorMessage.textContent = `❌ ${message}`;
+            setTimeout(() => {
+                errorMessage.textContent = '';
+            }, 3000);
+        }
+        
+        // 初始化汉字魔法师
+        function initWriter(character) {
+            loadingIndicator.style.display = 'block';
+            errorMessage.textContent = '';
+            
+            writer = HanziWriter.create('character-target-div', character, {
+                width: 250,
+                height: 250,
+                padding: 20,
+                showOutline: true,
+                strokeAnimationSpeed: 2,
+                delayBetweenStrokes: 100,
+                radicalColor: '#337ab7',      // 偏旁部首是蓝色的！
+                strokeColor: '#000000',       // 笔画是黑色的
+                outlineColor: '#DDDDDD',     // 轮廓是灰色的
+                charDataLoader: function(char, onComplete) {
+                    // 从精灵仓库召唤汉字数据
+                    $.getJSON("package/" + char + ".json")
+                        .done(function(charData) {
+                            loadingIndicator.style.display = 'none';
+                            onComplete(charData);
+                        })
+                        .fail(function(jqXHR, textStatus, errorThrown) {
+                            loadingIndicator.style.display = 'none';
+                            showError(`汉字精灵"${char}"在睡觉，叫不醒: ${textStatus}`);
+                            // 提供一个空数据防止魔法失效
+                            onComplete({
+                                character: char,
+                                strokes: [],
+                                medians: []
+                            });
+                        });
+                }
+            });
+        }
+        
+        // 开始魔法仪式
+        initWriter(characterInput.value);
+        
+        // 魔法按钮事件
+        document.getElementById('animate-button').addEventListener('click', function() {
+            writer.animateCharacter({
+                onComplete: function() {
+                    console.log('🎉 汉字跳完舞啦！');
+                }
+            });
+        });
+        
+        document.getElementById('change-character').addEventListener('click', function() {
+            const newChar = characterInput.value.trim();
+            if (newChar) {
+                loadingIndicator.style.display = 'block';
+                errorMessage.textContent = '';
+                
+                writer.setCharacter(newChar)
+                    .then(function() {
+                        loadingIndicator.style.display = 'none';
+                        console.log(`✨ 成功变身成${newChar}！`);
+                    })
+                    .catch(function(err) {
+                        loadingIndicator.style.display = 'none';
+                        showError('变身失败！汉字精灵不配合');
+                    });
+            }
+        });
+        
+        document.getElementById('quiz-button').addEventListener('click', function() {
+            writer.quiz({
+                onComplete: function() {
+                    console.log('🏆 挑战成功！你真棒！');
+                }
+            });
+        });
+        
+        document.getElementById('hide-outline').addEventListener('click', function() {
+            isOutlineVisible = !isOutlineVisible;
+            if (isOutlineVisible) {
+                writer.showOutline();
+                outlineStatus.textContent = '✨ 当前状态: 轮廓显示中';
+                this.textContent = '👻 隐藏轮廓';
+            } else {
+                writer.hideOutline();
+                outlineStatus.textContent = '👻 当前状态: 轮廓隐藏中';
+                this.textContent = '👀 显示轮廓';
+            }
+        });
+    </script>
+</body>
+</html>
